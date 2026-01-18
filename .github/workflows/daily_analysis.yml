@@ -71,6 +71,8 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           # 方式四：邮件（只需邮箱和授权码，SMTP自动识别）
+          # 关键！通知渠道映射（必须匹配你截图里的 Secret 名字）
+          # 左边是程序要找的名字，右边是你 Secret 的名字
           PUSH_CHANNEL: ${{ secrets.PUSH_CHANNEL }}
           EMAIL_USER: ${{ secrets.EMAIL_USER }}
           EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
