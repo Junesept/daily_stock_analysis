@@ -71,11 +71,16 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           # 方式四：邮件（只需邮箱和授权码，SMTP自动识别）
-          # 关键！通知渠道映射（必须匹配你截图里的 Secret 名字）
-          # 左边是程序要找的名字，右边是你 Secret 的名字
+          # 2. 核心推送开关（之前缺失这一行，导致无法推送）
           PUSH_CHANNEL: ${{ secrets.PUSH_CHANNEL }}
+
+          # 3. 邮件桥梁（必须左侧对应程序需求，右侧对应你的 Secret 名字）
+          # 根据你的截图，Secret 名字分别是 EMAIL_USER, EMAIL_PASSWORD, RECEIVER_EMAIL
           EMAIL_USER: ${{ secrets.EMAIL_USER }}
+          EMAIL_SENDER: ${{ secrets.EMAIL_USER }}
           EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+          EMAIL_RECEIVER: ${{ secrets.RECEIVER_EMAIL }}
+          EMAIL_RECEIVERS: ${{ secrets.RECEIVER_EMAIL }}
           RECEIVER_EMAIL: ${{ secrets.RECEIVER_EMAIL }}
           EMAIL_HOST: ${{ secrets.EMAIL_HOST }}
           EMAIL_PORT: ${{ secrets.EMAIL_PORT }}
