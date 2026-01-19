@@ -30,6 +30,7 @@ if os.getenv("GITHUB_ACTIONS") != "true":
     # os.environ["https_proxy"] = "http://127.0.0.1:10809"
     pass
 
+import vcp_scanner
 import argparse
 import logging
 import sys
@@ -513,10 +514,21 @@ class StockAnalysisPipeline:
         """
         start_time = time.time()
         
-        # 使用配置中的股票列表
+        # 接入 VCP 动态扫描逻辑
         if stock_codes is None:
-            self.config.refresh_stock_list()
-            stock_codes = self.config.stock_list
+            import vcp_scanner
+            logger.info("🚀 启动 VCP 扫描器：正在筛选当日上涨且符合形态的个股...")
+            
+            # 运行你的 VCP 扫描机器人
+            scanned_results = vcp_scanner.get_vcp_targets()
+            
+            if scanned_results:
+                stock_codes = scanned_results
+                logger.info(f"✅ 扫描完成！发现 {len(stock_codes)} 只符合 VCP 潜力的股票。")
+            else:
+                # 保底机制：如果没扫到，分析一只绩优股作为系统存活检查
+                stock_codes = ["sh600519"] 
+                logger.info("📍 今日未发现符合形态的个股，默认分析贵州茅台。")
         
         if not stock_codes:
             logger.error("未配置自选股列表，请在 .env 文件中设置 STOCK_LIST")
