@@ -125,6 +125,7 @@ class GeminiAnalyzer:
         self._api_key = api_key or config.gemini_api_key
         self._model = None
         self._current_model_name = config.gemini_model
+        self._use_openai = False
         self._init_model()
 
     def is_available(self) -> bool:
