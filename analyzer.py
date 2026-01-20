@@ -127,6 +127,10 @@ class GeminiAnalyzer:
         self._current_model_name = config.gemini_model
         self._init_model()
 
+    def is_available(self) -> bool:
+        """检查分析器是否可用（大盘分析模块需要此方法）"""
+        return self._model is not None
+
     def _init_model(self) -> None:
         try:
             import google.generativeai as genai
