@@ -194,6 +194,20 @@ class NotificationService:
         # (原代码逻辑保持不变，用于支持非邮件渠道)
         return "Markdown Content"
 
+    def save_report_to_file(self, content: str, filename: Optional[str] = None) -> str:
+        """保存日报到本地文件（主程序必须）"""
+        from pathlib import Path
+        if filename is None:
+            date_str = datetime.now().strftime('%Y%m%d')
+            filename = f"report_{date_str}.md"
+        reports_dir = Path(__file__).parent / 'reports'
+        reports_dir.mkdir(parents=True, exist_ok=True)
+        filepath = reports_dir / filename
+        with open(filepath, 'w', encoding='utf-8') as f:
+            f.write(content)
+        logger.info(f"日报已保存到: {filepath}")
+        return str(filepath)
+
 def send_daily_report(results: List[AnalysisResult]) -> bool:
     """快捷调用函数"""
     service = NotificationService()
