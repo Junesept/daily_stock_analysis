@@ -28,13 +28,12 @@ def get_vcp_targets():
             qualified = []
             for _, row in rising.iterrows():
                 code = row['代码']
-                # 统一修正格式：Baostock/Efinance 兼容性处理
-                symbol = f"sh{code}" if code.startswith('6') else f"sz{code}"
+                # 统一修正：返回纯数字代码，由底层 Fetcher 自行补全前缀
                 try:
                     # 降低数据量以提速
                     hist = ak.stock_zh_a_hist(symbol=code, period="daily", adjust="qfq").tail(60)
                     if check_vcp_condition(hist):
-                        qualified.append(symbol)
+                        qualified.append(code)
                         logger.info(f"🎯 命中: {row['名称']} ({code})")
                 except: continue
             return qualified[:5]
