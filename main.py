@@ -527,7 +527,7 @@ class StockAnalysisPipeline:
                 logger.info(f"✅ 扫描完成！发现 {len(stock_codes)} 只符合 VCP 潜力的股票。")
             else:
                 # 保底机制：如果没扫到，分析一只绩优股作为系统存活检查
-                stock_codes = ["sh600519"] 
+                stock_codes = ["sh.600519"] 
                 logger.info("📍 今日未发现符合形态的个股，默认分析贵州茅台。")
         
         if not stock_codes:
