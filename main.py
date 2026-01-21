@@ -837,12 +837,19 @@ def run_full_analysis(
         # 输出摘要
         if results:
             logger.info("\n===== 分析结果摘要 =====")
-            for r in sorted(results, key=lambda x: x.sentiment_score, reverse=True):
-                emoji = r.get_emoji()
-                logger.info(
-                    f"{emoji} {r.name}({r.code}): {r.operation_advice} | "
-                    f"评分 {r.sentiment_score} | {r.trend_prediction}"
-                )
+            # 1. 过滤掉可能混入的字符串错误消息，只保留有效的分析对象
+            valid_results = [r for r in results if not isinstance(r, str)]
+            
+            # 2. 对有效对象按评分排序并输出
+            for r in sorted(valid_results, key=lambda x: x.sentiment_score, reverse=True):
+                try:
+                    emoji = r.get_emoji()
+                    logger.info(
+                        f"{emoji} {r.name}({r.code}): {r.operation_advice} | "
+                        f"评分 {r.sentiment_score} | {r.trend_prediction}"
+                    )
+                except Exception as e:
+                    logger.error(f"输出摘要时出错: {e}")
         
         logger.info("\n任务执行完成")
 
