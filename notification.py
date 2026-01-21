@@ -208,6 +208,26 @@ class NotificationService:
         logger.info(f"日报已保存到: {filepath}")
         return str(filepath)
 
+    def is_available(self) -> bool:
+        """检查通知服务是否可用"""
+        return len(self._available_channels) > 0
+
+    def generate_daily_report(self, results: List[AnalysisResult], report_date: Optional[str] = None) -> str:
+        """生成 Markdown 格式的普通日报（保底用）"""
+        if report_date is None:
+            report_date = datetime.now().strftime('%Y-%m-%d')
+        lines = [f"# 📅 {report_date} 股票分析简报", ""]
+        for r in results:
+            lines.append(f"### {r.get_emoji()} {r.name} ({r.code})")
+            lines.append(f"- 建议: **{r.operation_advice}** (评分: {r.sentiment_score})")
+            lines.append(f"- 结论: {r.get_core_conclusion()}")
+            lines.append("")
+        return "\n".join(lines)
+
+    def generate_dashboard_report(self, results: List[AnalysisResult], report_date: Optional[str] = None) -> str:
+        """这个方法被 main.py 调用，我们直接重定向到生成 Markdown 逻辑"""
+        return self.generate_daily_report(results, report_date)
+
 def send_daily_report(results: List[AnalysisResult]) -> bool:
     """快捷调用函数"""
     service = NotificationService()
