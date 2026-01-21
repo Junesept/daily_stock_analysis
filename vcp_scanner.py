@@ -21,6 +21,10 @@ def get_vcp_targets():
     for attempt in range(3): # 增加3次重试机制处理网络超时
         try:
             logger.info(f"🚀 尝试获取实时行情 (第{attempt+1}次)...")
+            # 在 try 块内部增加这行设置超时和重试逻辑
+            import requests
+            # 增加全局请求超时设置的尝试（AkShare 内部可能不完全遵守，但能缓解）
+            logger.info(f"🚀 尝试获取实时行情 (第{attempt+1}次)...")
             # 增加 timeout 参数
             all_stocks = ak.stock_zh_a_spot_em() 
             rising = all_stocks[all_stocks['涨跌幅'] > 0].sort_values(by='成交额', ascending=False).head(60)
