@@ -67,6 +67,30 @@ class AnalysisResult:
     def to_dict(self) -> Dict[str, Any]:
         return {k: v for k, v in self.__dict__.items() if not k.startswith('_')}
 
+    def get_emoji(self) -> str:
+        """根据操作建议返回对应 emoji，防止 main.py 报错"""
+        emoji_map = {
+            '买入': '🟢', '加仓': '🟢', '强烈买入': '💚',
+            '持有': '🟡', '观望': '⚪', '减仓': '🟠',
+            '卖出': '🔴', '强烈卖出': '❌',
+        }
+        return emoji_map.get(self.operation_advice, '🟡')
+
+    def get_core_conclusion(self) -> str:
+        if self.dashboard and 'core_conclusion' in self.dashboard:
+            return self.dashboard['core_conclusion'].get('one_sentence', self.analysis_summary)
+        return self.analysis_summary
+
+    def get_sniper_points(self) -> Dict[str, str]:
+        if self.dashboard and 'battle_plan' in self.dashboard:
+            return self.dashboard['battle_plan'].get('sniper_points', {})
+        return {}
+
+    def get_checklist(self) -> List[str]:
+        if self.dashboard and 'battle_plan' in self.dashboard:
+            return self.dashboard['battle_plan'].get('action_checklist', [])
+        return []
+
 class GeminiAnalyzer:
     """
     VCP 专属 AI 分析器
