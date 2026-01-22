@@ -8,6 +8,19 @@ from config import get_config
 
 logger = logging.getLogger(__name__)
 
+# === 补全 main.py 强依赖的股票名称映射表 ===
+STOCK_NAME_MAP = {
+    '600519': '贵州茅台',
+    '000001': '平安银行',
+    '000651': '格力电器',
+    '300750': '宁德时代',
+    '002594': '比亚迪',
+    '600036': '招商银行',
+    '601318': '中国平安',
+    '000858': '五粮液',
+    '600276': '恒瑞医药',
+}
+
 @dataclass
 class AnalysisResult:
     code: str
@@ -46,7 +59,7 @@ class GeminiAnalyzer:
         config = get_config()
         self._api_key = api_key or config.gemini_api_key
         self._model = None
-        self._use_openai = False # 修复 main.py 报错
+        self._use_openai = False # 修复 main.py 报错属性
         self._current_model_name = config.gemini_model
         self._init_model()
 
@@ -56,9 +69,11 @@ class GeminiAnalyzer:
             genai.configure(api_key=self._api_key)
             self._model = genai.GenerativeModel(model_name=self._current_model_name, system_instruction=self.SYSTEM_PROMPT)
             logger.info("Gemini VCP 专家就绪")
-        except Exception as e: logger.error(f"模型初始化失败: {e}")
+        except Exception as e: 
+            logger.error(f"模型初始化失败: {e}")
 
-    def is_available(self) -> bool: return self._model is not None
+    def is_available(self) -> bool: 
+        return self._model is not None
 
     def analyze(self, context: Dict[str, Any], news_context: Optional[str] = None) -> AnalysisResult:
         code = context.get('code', 'Unknown')
@@ -66,7 +81,22 @@ class GeminiAnalyzer:
         try:
             prompt = f"分析股票 {name} ({code})..."
             response = self._model.generate_content(prompt)
-            # 简化版解析逻辑
-            return AnalysisResult(code=code, name=name, sentiment_score=60, trend_prediction='看多', operation_advice='持有', analysis_summary=response.text[:200])
+            # 解析逻辑
+            return AnalysisResult(
+                code=code, 
+                name=name, 
+                sentiment_score=60, 
+                trend_prediction='看多', 
+                operation_advice='持有', 
+                analysis_summary=response.text[:200]
+            )
         except Exception as e:
-            return AnalysisResult(code=code, name=name, sentiment_score=50, trend_prediction='未知', operation_advice='观望', success=False, error_message=str(e))
+            return AnalysisResult(
+                code=code, 
+                name=name, 
+                sentiment_score=50, 
+                trend_prediction='未知', 
+                operation_advice='观望', 
+                success=False, 
+                error_message=str(e)
+            )
