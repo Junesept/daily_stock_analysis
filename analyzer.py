@@ -8,17 +8,10 @@ from config import get_config
 
 logger = logging.getLogger(__name__)
 
-# === 补全 main.py 强依赖的股票名称映射表 ===
 STOCK_NAME_MAP = {
-    '600519': '贵州茅台',
-    '000001': '平安银行',
-    '000651': '格力电器',
-    '300750': '宁德时代',
-    '002594': '比亚迪',
-    '600036': '招商银行',
-    '601318': '中国平安',
-    '000858': '五粮液',
-    '600276': '恒瑞医药',
+    '600519': '贵州茅台', '000001': '平安银行', '000651': '格力电器',
+    '300308': '中际旭创', '688008': '澜起科技', '600879': '航天电子',
+    '300502': '新易盛', '688041': '海光信息', '300750': '宁德时代'
 }
 
 @dataclass
@@ -35,7 +28,7 @@ class AnalysisResult:
 
     def get_emoji(self) -> str:
         emoji_map = {'买入': '🟢', '加仓': '🟢', '强烈买入': '💚', '持有': '🟡', '观望': '⚪', '减仓': '🟠', '卖出': '🔴'}
-        return emoji_map.get(self.operation_advice, '🟡')
+        return emoji_map.get(self.operation_advice, '⚪')
 
     def get_core_conclusion(self) -> str:
         if self.dashboard and 'core_conclusion' in self.dashboard:
@@ -53,13 +46,13 @@ class AnalysisResult:
         return []
 
 class GeminiAnalyzer:
-    SYSTEM_PROMPT = "你是一位精通 Mark Minervini VCP 理论的交易员。请分析扫描到的潜力股..."
+    SYSTEM_PROMPT = "你是一位精通 Mark Minervini VCP 理论的交易员。请根据行情数据给出买入、止损点位。"
 
     def __init__(self, api_key: Optional[str] = None):
         config = get_config()
         self._api_key = api_key or config.gemini_api_key
         self._model = None
-        self._use_openai = False # 修复 main.py 报错属性
+        self._use_openai = False 
         self._current_model_name = config.gemini_model
         self._init_model()
 
@@ -69,34 +62,17 @@ class GeminiAnalyzer:
             genai.configure(api_key=self._api_key)
             self._model = genai.GenerativeModel(model_name=self._current_model_name, system_instruction=self.SYSTEM_PROMPT)
             logger.info("Gemini VCP 专家就绪")
-        except Exception as e: 
-            logger.error(f"模型初始化失败: {e}")
+        except Exception as e: logger.error(f"模型初始化失败: {e}")
 
-    def is_available(self) -> bool: 
-        return self._model is not None
+    def is_available(self) -> bool: return self._model is not None
 
     def analyze(self, context: Dict[str, Any], news_context: Optional[str] = None) -> AnalysisResult:
         code = context.get('code', 'Unknown')
-        name = context.get('stock_name', f'股票{code}')
+        name = context.get('stock_name', STOCK_NAME_MAP.get(code, f'股票{code}'))
         try:
-            prompt = f"分析股票 {name} ({code})..."
+            prompt = f"请分析股票 {name} ({code}) 的 VCP 形态：\n{json.dumps(context, ensure_ascii=False)}"
             response = self._model.generate_content(prompt)
-            # 解析逻辑
-            return AnalysisResult(
-                code=code, 
-                name=name, 
-                sentiment_score=60, 
-                trend_prediction='看多', 
-                operation_advice='持有', 
-                analysis_summary=response.text[:200]
-            )
+            # 这里 AI 会返回包含 VCP 决策的文本
+            return AnalysisResult(code=code, name=name, sentiment_score=60, trend_prediction='看多', operation_advice='持有', analysis_summary=response.text[:500])
         except Exception as e:
-            return AnalysisResult(
-                code=code, 
-                name=name, 
-                sentiment_score=50, 
-                trend_prediction='未知', 
-                operation_advice='观望', 
-                success=False, 
-                error_message=str(e)
-            )
+            return AnalysisResult(code=code, name=name, sentiment_score=50, trend_prediction='未知', operation_advice='观望', success=False, error_message=str(e))
