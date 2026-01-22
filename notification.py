@@ -15,6 +15,11 @@ logger = logging.getLogger(__name__)
 
 class NotificationChannel(Enum):
     EMAIL = "email"
+    EMAIL = "email"
+    WECHAT = "wechat"   # <--- 必须加上这一行
+    FEISHU = "feishu"   # <--- 建议也加上
+    TELEGRAM = "telegram"
+    UNKNOWN = "unknown"
 
 class NotificationService:
     def __init__(self):
@@ -67,6 +72,10 @@ class NotificationService:
     def send(self, results_or_content: Any) -> bool:
         """主程序 main.py 调用的统一入口"""
         if isinstance(results_or_content, list):
+            # 即使微信发送失败，也确保邮件能发出去
+        email_success = self.send_to_email(results_or_content)
+        return email_success 
+    return True
             # 处理股票分析列表
             return self.send_to_email(results_or_content)
         elif isinstance(results_or_content, str):
