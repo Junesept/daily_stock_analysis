@@ -19,6 +19,12 @@ def get_vcp_targets():
             all_stocks = ak.stock_zh_a_spot_em()
             # 缩减范围到前 60 只，防止多伦多网络超时
             rising = all_stocks[all_stocks['涨跌幅'] > 0].sort_values(by='成交额', ascending=False).head(60)
+
+            # --- 核心改进：即使全市场快照失败，也要继续 ---
+            if all_stocks is None or all_stocks.empty:
+                logger.warning("无法获取全市场快照，切换至保底扫描逻辑...")
+                # 这里可以返回你关注的几个核心代码，或者直接返回空
+                return ["600879", "300308"]
             
             qualified = []
             for _, row in rising.iterrows():
