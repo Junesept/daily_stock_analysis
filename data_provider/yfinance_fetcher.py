@@ -147,6 +147,10 @@ class YfinanceFetcher(BaseFetcher):
         
         # 重置索引，将日期从索引变为列
         df = df.reset_index()
+
+        # yfinance 最新的版本返回的是 MultiIndex，我们需要压平
+        if isinstance(df.columns, pd.MultiIndex):
+            df.columns = [col[0] if col[1] == '' else col[0] for col in df.columns]
         
         # 列名映射（yfinance 使用首字母大写）
         column_mapping = {
@@ -159,6 +163,15 @@ class YfinanceFetcher(BaseFetcher):
         }
         
         df = df.rename(columns=column_mapping)
+
+        # 补全缺失列
+        if 'close' in df.columns:
+            df['pct_chg'] = df['close'].pct_change() * 100
+            df['amount'] = df['volume'] * df['close'] # 估算成交额
+        
+        df['code'] = stock_code
+        # 确保列名顺序和 DataFetcherManager 要求的一致
+        return df[['code', 'date', 'open', 'high', 'low', 'close', 'volume', 'amount', 'pct_chg']]
         
         # 计算涨跌幅（因为 yfinance 不直接提供）
         if 'close' in df.columns:
