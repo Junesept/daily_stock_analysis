@@ -15,9 +15,8 @@ logger = logging.getLogger(__name__)
 
 class NotificationChannel(Enum):
     EMAIL = "email"
-    EMAIL = "email"
-    WECHAT = "wechat"   # <--- 必须加上这一行
-    FEISHU = "feishu"   # <--- 建议也加上
+    WECHAT = "wechat"
+    FEISHU = "feishu"
     TELEGRAM = "telegram"
     UNKNOWN = "unknown"
 
@@ -32,13 +31,11 @@ class NotificationService:
         self._available_channels = [NotificationChannel.EMAIL] if self._email_config['sender'] else []
 
     def is_available(self) -> bool: return len(self._available_channels) > 0
-
     def get_available_channels(self) -> List[NotificationChannel]: return self._available_channels
 
     def generate_dashboard_report(self, results: List[Any], report_date=None) -> str:
         date_str = report_date or datetime.now().strftime('%Y-%m-%d')
         lines = [f"# VCP 潜力股扫描日报 ({date_str})"]
-        # 过滤掉字符串报错，只保留对象
         valid_res = [r for r in results if not isinstance(r, str)]
         for r in valid_res:
             lines.append(f"### {r.get_emoji()} {r.name} | {r.sentiment_score}分")
@@ -53,7 +50,6 @@ class NotificationService:
 
     def _generate_vcp_html_body(self, results: List[Any]) -> str:
         cards_html = ""
-        # 核心修复：只处理有效的 AnalysisResult 对象
         valid_results = [res for res in results if not isinstance(res, str)]
         for res in valid_results:
             points = res.get_sniper_points()
@@ -72,14 +68,10 @@ class NotificationService:
     def send(self, results_or_content: Any) -> bool:
         """主程序 main.py 调用的统一入口"""
         if isinstance(results_or_content, list):
-            # 即使微信发送失败，也确保邮件能发出去
-        email_success = self.send_to_email(results_or_content)
-        return email_success 
-    return True
-            # 处理股票分析列表
+            # 处理股票分析列表，发送 HTML 邮件
             return self.send_to_email(results_or_content)
         elif isinstance(results_or_content, str):
-            # 处理大盘复盘报告（纯文本/Markdown 字符串）
+            # 处理大盘复盘报告（纯文本）
             return self.send_text_email(results_or_content)
         return False
 
@@ -91,7 +83,6 @@ class NotificationService:
             msg['From'] = self._email_config['sender']
             msg['To'] = ', '.join(self._email_config['receivers'])
             msg.attach(MIMEText(self._generate_vcp_html_body(results), 'html', 'utf-8'))
-            
             with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
                 server.login(self._email_config['sender'], self._email_config['password'])
                 server.send_message(msg)
@@ -101,7 +92,6 @@ class NotificationService:
             return False
 
     def send_text_email(self, content: str, subject: str = "📈 A股大盘复盘简报") -> bool:
-        """专门发送纯文本/Markdown 格式的大盘报告"""
         try:
             msg = MIMEMultipart()
             msg['Subject'] = Header(subject, 'utf-8')
