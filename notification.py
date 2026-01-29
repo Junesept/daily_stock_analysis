@@ -54,13 +54,14 @@ class NotificationService:
         for res in valid_results:
             points = res.get_sniper_points()
             cards_html += f"""
-            <div style="background:#fff; border-radius:12px; border:1px solid #e0e6ed; margin-bottom:20px; padding:20px; font-family:sans-serif;">
-                <h2 style="color:#1a73e8; margin-top:0;">{res.get_emoji()} {res.name} ({res.code})</h2>
-                <p><strong>AI 评分:</strong> {res.sentiment_score}</p>
-                <p><strong>分析摘要:</strong> {res.get_core_conclusion()}</p>
-                <div style="background:#f8f9fa; border-left:4px solid #1e8e3e; padding:10px;">
-                    <strong>狙击位：</strong> 买入: {points.get('ideal_buy', '待定')} | 止损: {points.get('stop_loss', 'N/A')}
-                </div>
+            <div style="background:#fffbe6; border:1px solid #ffe58f; padding:15px; border-radius:8px; margin-top:15px;">
+                <strong style="color:#856404;">⚠️ 关键人工步骤：筹码核查</strong>
+                <p style="font-size:13px; color:#555;">该报告基于 Yahoo 财经技术面分析。请在 <strong>Moomoo</strong> 中打开该股，切换至<strong>「筹码分布」</strong>叠加层：</p>
+                <ul style="font-size:12px; color:#666;">
+                    <li>确认获利比例是否 > 80%</li>
+                    <li>确认 90% 筹码集中度是否 < 15%</li>
+                    <li><strong>VCP 核心：</strong>只有当筹码在高位完成“换手收缩”后，突破才有效。</li>
+                </ul>
             </div>
             """
         return f"<html><body style='background:#f4f7f9; padding:20px;'>{cards_html}</body></html>"
