@@ -2,7 +2,7 @@
 import logging
 import smtplib
 from datetime import datetime
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Union
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.header import Header
@@ -30,107 +30,76 @@ class NotificationService:
         self._available_channels = [NotificationChannel.EMAIL] if self._email_config['sender'] else []
 
     def is_available(self) -> bool: return len(self._available_channels) > 0
-    def get_available_channels(self) -> List[NotificationChannel]: return self._available_channels
 
     def _generate_vcp_html_body(self, results: List[Any]) -> str:
-        """强化版 HTML 渲染，使用严格类型检查防止崩溃"""
+        """渲染 HTML 股票卡片"""
+        # 严格过滤，确保只处理对象或字典，不处理字符串字符
         valid_results = [r for r in results if not isinstance(r, str)]
-        logger.info(f"📬 正在渲染邮件卡片，有效股票数: {len(valid_results)}")
+        logger.info(f"📬 正在渲染 HTML 邮件，有效股票对象数: {len(valid_results)}")
         
         cards_html = ""
         for res in valid_results:
             try:
-                # 安全提取基础字段
-                if isinstance(res, dict):
-                    code = str(res.get('code', '未知'))
-                    name = str(res.get('name', '未知'))
-                    score = res.get('sentiment_score', 0)
-                    advice = res.get('operation_advice', '观望')
-                    summary = res.get('analysis_summary', 'AI 暂无总结')
-                    emoji = '⚪'
-                    points = res.get('dashboard', {}).get('battle_plan', {}).get('sniper_points', {})
-                else:
-                    # 处理 AnalysisResult 对象
-                    code = getattr(res, 'code', '未知')
-                    name = getattr(res, 'name', '未知')
-                    score = getattr(res, 'sentiment_score', 0)
-                    advice = getattr(res, 'operation_advice', '观望')
-                    summary = getattr(res, 'analysis_summary', 'AI 暂无总结')
-                    emoji = res.get_emoji() if hasattr(res, 'get_emoji') else '⚪'
-                    points = res.get_sniper_points() if hasattr(res, 'get_sniper_points') else {}
-
+                # 兼容对象和字典
+                code = getattr(res, 'code', res.get('code', '未知') if isinstance(res, dict) else '未知')
+                name = getattr(res, 'name', res.get('name', '未知') if isinstance(res, dict) else '未知')
+                score = getattr(res, 'sentiment_score', res.get('sentiment_score', 0) if isinstance(res, dict) else 0)
+                summary = getattr(res, 'analysis_summary', res.get('analysis_summary', 'AI 诊断中...') if isinstance(res, dict) else 'AI 诊断中...')
+                
                 cards_html += f"""
-                <div style="background:#fff; border-radius:12px; border:1px solid #e0e6ed; margin-bottom:20px; padding:20px; font-family:sans-serif;">
-                    <h2 style="color:#1a73e8; margin-top:0;">{emoji} {name} ({code})</h2>
-                    <div style="font-size:16px; font-weight:bold; color:#f29900; margin-bottom:10px;">
-                        VCP 评分: {score} | 建议: {advice}
-                    </div>
-                    <p style="color:#3c4043; line-height:1.6;">{str(summary)[:300]}...</p>
-                    <div style="background:#f8f9fa; border-left:4px solid #1e8e3e; padding:12px; margin-top:10px;">
-                        <strong>狙击参考位：</strong> 
-                        买入: <span style="color:#1e8e3e;">{points.get('ideal_buy', '等待信号')}</span> | 
-                        止损: <span style="color:#d93025;">{points.get('stop_loss', '参考5日线')}</span>
-                    </div>
+                <div style="background:#fff; border:1px solid #e0e6ed; border-radius:12px; padding:20px; margin-bottom:20px; font-family:sans-serif;">
+                    <h2 style="color:#1a73e8; margin:0 0 10px 0;">📈 {name} ({code})</h2>
+                    <div style="font-size:16px; color:#f29900; margin-bottom:10px;">VCP 评分: <strong>{score}</strong></div>
+                    <p style="color:#3c4043; line-height:1.6; font-size:14px;">{str(summary)[:400]}...</p>
                 </div>
                 """
             except Exception as e:
-                logger.error(f"单条股票渲染失败: {e}")
+                logger.warning(f"单条渲染跳过: {e}")
                 continue
-        
+
         if not cards_html:
-            cards_html = "<div style='padding:20px; background:#fff;'>今日扫描完成，暂无符合 VCP 形态的个股进入分析池。</div>"
-            
+            cards_html = "<p style='color:#666;'>今日扫描池个股暂未达到 AI 深入诊断的标准，建议关注大盘趋势。</p>"
+
         manual_check = """
         <div style="background:#fffbe6; border:1px solid #ffe58f; padding:15px; border-radius:8px; margin-top:20px;">
-            <strong style="color:#856404;">⚠️ 关键步骤：Moomoo 筹码核查</strong>
-            <p style="font-size:13px; color:#555; margin-bottom:0;">Yahoo 财经数据不含筹码，请在 Moomoo 确认<strong>获利比例是否 > 80%</strong>。</p>
+            <strong style="color:#856404;">⚠️ 关键人工核对：Moomoo 筹码分布</strong>
+            <p style="font-size:13px; color:#555; margin-bottom:0;">由于使用 Yahoo 稳定源，请在 Moomoo 客户端确认：<strong>获利比例是否 > 80%</strong> 且 <strong>筹码集中度 < 15%</strong>。</p>
         </div>
         """
         return f"<html><body style='background:#f4f7f9; padding:20px;'>{cards_html}{manual_check}</body></html>"
 
-    def send(self, results_or_content: Any) -> bool:
-        if isinstance(results_or_content, list):
-            return self.send_to_email(results_or_content)
-        elif isinstance(results_or_content, str):
-            return self.send_text_email(results_or_content)
-        return False
-
-    def send_to_email(self, results: List[Any], subject: Optional[str] = None) -> bool:
+    def send_to_email(self, results_or_text: Union[List[Any], str], subject: Optional[str] = None) -> bool:
+        """【核心修复】智能识别输入内容"""
         if not self.is_available(): return False
+        
         try:
             msg = MIMEMultipart()
             date_tag = datetime.now().strftime('%m-%d')
-            msg['Subject'] = Header(subject or f"🚀 VCP 扫描报告 ({date_tag})", 'utf-8')
+            msg['Subject'] = Header(subject or f"🚀 VCP 扫描/复盘报告 ({date_tag})", 'utf-8')
             msg['From'] = self._email_config['sender']
             msg['To'] = ', '.join(self._email_config['receivers'])
-            
-            html_body = self._generate_vcp_html_body(results)
-            msg.attach(MIMEText(html_body, 'html', 'utf-8'))
-            
+
+            # 智能分流
+            if isinstance(results_or_text, list):
+                # 输入是列表 -> 发送 HTML 卡片
+                html_content = self._generate_vcp_html_body(results_or_text)
+                msg.attach(MIMEText(html_content, 'html', 'utf-8'))
+            else:
+                # 输入是字符串 -> 发送纯文本/Markdown
+                msg.attach(MIMEText(str(results_or_text), 'plain', 'utf-8'))
+
             with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
                 server.login(self._email_config['sender'], self._email_config['password'])
                 server.send_message(msg)
-            logger.info("✅ VCP 扫描邮件已成功送达")
+            logger.info("✅ 邮件通知已成功送达")
             return True
         except Exception as e:
-            logger.error(f"❌ 邮件失败: {e}")
+            logger.error(f"❌ 邮件发送失败: {e}")
             return False
 
-    def send_text_email(self, content: str, subject: str = "📈 A股大盘复盘简报") -> bool:
-        try:
-            msg = MIMEMultipart()
-            msg['Subject'] = Header(subject, 'utf-8')
-            msg['From'] = self._email_config['sender']
-            msg['To'] = ', '.join(self._email_config['receivers'])
-            msg.attach(MIMEText(content, 'plain', 'utf-8'))
-            with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
-                server.login(self._email_config['sender'], self._email_config['password'])
-                server.send_message(msg)
-            logger.info("✅ 大盘复盘邮件已成功送达")
-            return True
-        except Exception as e:
-            logger.error(f"大盘报告失败: {e}")
-            return False
+    def send(self, content: Any) -> bool:
+        """主入口适配器"""
+        return self.send_to_email(content)
 
     def generate_dashboard_report(self, results: List[Any], report_date=None) -> str:
         date_str = report_date or datetime.now().strftime('%Y-%m-%d')
@@ -150,4 +119,4 @@ class NotificationService:
         return str(filepath)
 
 def send_daily_report(results: List[Any]) -> bool:
-    return NotificationService().send(results)
+    return NotificationService().send_to_email(results)
